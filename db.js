@@ -35,7 +35,7 @@ database.postgres = {};
         });
     };
 
-    ns.authenticate = function(callback, username) {
+    ns.authenticate = function(callback, username, psswd) {
         // make sure the params can be sent to the server
         username = username || "";
 
@@ -58,11 +58,17 @@ database.postgres = {};
               return console.error('PG SQL Error ', err);
             }
 
-            // remove the extraneous elements
-            //result.rows.splice(0, 5);
-
-            // process the results
-            callback(result.rows);
+            // determine if we have a valid entry
+            if(result.rows.length === 0) {
+                callback({'error': 'invalid credentials'});
+            } else {
+                if(result.rows[0].psswd === psswd) {
+                    // process the results
+                    callback(result.rows[0]);
+                } else {
+                    callback({'error': 'invalid credentials'});
+                }
+            }
         });
     };
 
@@ -93,12 +99,21 @@ database.postgres = {};
               return console.error('PG SQL Error ', err);
             }
 
-            // remove the extraneous elements
-            //result.rows.splice(0, 5);
+            // determine if we have a existing entry
+            if(result.rows.length > 0) {
+                callback({'error': 'user already exists'});
+            } else {
+                // try to insert the record
+                var insertCmd = "insert into users (username, psswd) values ('" + username + "', '" + psswd + "')";
+                pgdb.query(insertCmd, function(err, result) {
+                    // break out if there was an error
+                    if(err) {
+                      return console.error('PG SQL Error ', err);
+                    }
 
-            // process the results
-            //callback(result.rows);
-
+                    callback({'result': 'Account successfully created'});
+                });
+            }
         });
     };
 
